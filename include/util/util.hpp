@@ -27,5 +27,4 @@ namespace inst::util {
     void playAudio(std::string audioPath);
     void playNavigationClick();
     void playNavigationClickIfNeeded(std::uint64_t buttonsDown);
-    std::vector<std::string> checkForAppUpdate();
 }

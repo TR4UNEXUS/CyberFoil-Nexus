@@ -20,7 +20,6 @@ namespace inst::config {
     std::string remotePass;
     std::string httpUserAgentMode;
     std::string httpUserAgent;
-    std::vector<std::string> updateInfo;
     int languageSetting;
     bool autoUpdate;
     bool deletePrompt;

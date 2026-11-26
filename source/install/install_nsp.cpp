@@ -45,7 +45,7 @@ namespace inst::ui {
 
 namespace tin::install::nsp
 {
-    NSPInstall::NSPInstall(NcmStorageId destStorageId, bool ignoreReqFirmVersion, const std::shared_ptr<NSP>& remoteNSP) :
+    NSPInstall::NSPInstall(nx::nexus::Target destStorageId, bool ignoreReqFirmVersion, const std::shared_ptr<NSP>& remoteNSP) :
         Install(destStorageId, ignoreReqFirmVersion), m_NSP(remoteNSP)
     {
         m_NSP->RetrieveHeader();
@@ -65,15 +65,14 @@ namespace tin::install::nsp
             LOG_DEBUG("CNMT Name: %s\n", cnmtNcaName.c_str());
 
             // We install the cnmt nca early to read from it later
-            if (!contentStorage.Has(cnmtContentId)) this->InstallNCA(cnmtContentId);
-            std::string cnmtNCAFullPath = contentStorage.GetPath(cnmtContentId);
+            if (!contentStorage.CanReuse(cnmtContentId)) this->InstallNCA(cnmtContentId);
 
             NcmContentInfo cnmtContentInfo;
             cnmtContentInfo.content_id = cnmtContentId;
             ncmU64ToContentInfoSize(cnmtNcaSize & 0xFFFFFFFFFFFF, &cnmtContentInfo);
             cnmtContentInfo.content_type = NcmContentType_Meta;
 
-            CNMTList.push_back( { tin::util::GetContentMetaFromNCA(cnmtNCAFullPath), cnmtContentInfo } );
+            CNMTList.push_back( { contentStorage.ReadContentMeta(cnmtContentId), cnmtContentInfo } );
         }
 
         return CNMTList;
@@ -84,14 +83,14 @@ namespace tin::install::nsp
         const PFS0FileEntry* fileEntry = m_NSP->GetFileEntryByNcaId(ncaId);
         std::string ncaFileName = m_NSP->GetFileEntryName(fileEntry);
 
-        LOG_DEBUG("Installing %s to storage Id %u\n", ncaFileName.c_str(), m_destStorageId);
+        LOG_DEBUG("Installing %s to storage Id %u\n", ncaFileName.c_str(), m_destStorageId.logical);
 
         std::shared_ptr<nx::ncm::ContentStorage> contentStorage(new nx::ncm::ContentStorage(m_destStorageId));
 
         if (inst::ui::instPage::isInstallCancelRequested()) THROW_FORMAT("Installation canceled.");
-        if (contentStorage->Has(ncaId)) return;
+        if (contentStorage->CanReuse(ncaId)) return;
         // Track before streaming so unwind also cleans up early CNMT installs.
-        TrackSessionInstalledNca(ncaId);
+        if (!m_destStorageId.usb()) TrackSessionInstalledNca(ncaId);
 
         // Attempt to delete any leftover placeholders
         try {
@@ -142,6 +141,7 @@ namespace tin::install::nsp
             try
             {
                 contentStorage->Register(*(NcmPlaceHolderId*)&ncaId, ncaId);
+                if (m_destStorageId.usb()) TrackSessionInstalledNca(ncaId);
             }
             catch (...)
             {
@@ -158,7 +158,7 @@ namespace tin::install::nsp
         {
             try { contentStorage->DeletePlaceholder(*(NcmPlaceHolderId*)&ncaId); } catch (...) {}
             try {
-                if (contentStorage->Has(ncaId))
+                if (!m_destStorageId.usb() && contentStorage->Has(ncaId))
                     contentStorage->Delete(ncaId);
             } catch (...) {}
             throw;

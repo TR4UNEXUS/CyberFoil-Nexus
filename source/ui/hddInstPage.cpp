@@ -94,6 +94,7 @@ namespace inst::ui {
         this->Add(this->sysBarFill);
         this->Add(this->sdBarBack);
         this->Add(this->sdBarFill);
+        this->usbCard.attach(*this);
         this->Add(this->sysLabelText);
         this->Add(this->sysFreeText);
         this->Add(this->sdLabelText);
@@ -132,7 +133,8 @@ namespace inst::ui {
         if (clearItems) this->selectedTitles = {};
         const auto normalizedPath = normalizeRootPath(ourPath);
         const auto normalizedParent = normalizeRootPath(normalizedPath.parent_path());
-        const bool isRootPath = (normalizedParent == normalizedPath);
+        const bool isRootPath = normalizedParent == normalizedPath ||
+            (normalizedPath.string().starts_with("nexus:/") && normalizedPath.string().size() == 23);
         if (this->rootDir.empty() || (clearItems && isRootPath)) {
             this->rootDir = normalizedPath;
         }
@@ -142,7 +144,10 @@ namespace inst::ui {
             this->ourDirectories = util::getDirsAtPath(this->currentDir);
             this->ourFiles = util::getDirectoryFiles(this->currentDir, {".nsp", ".nsz", ".xci", ".xcz"});
         } catch (std::exception& e) {
-            this->drawMenuItems(false, this->currentDir.parent_path());
+            this->ourDirectories.clear();
+            this->ourFiles.clear();
+            mainApp->CreateShowDialog("USB drive", "This folder could not be read. Check the drive and reopen USB storage.", {"common.ok"_lang}, false);
+            mainApp->LoadLayout(mainApp->mainPage);
             return;
         }
         if (!inst::config::usbHddShowHiddenFiles) {
@@ -246,12 +251,13 @@ namespace inst::ui {
             instPage::enqueueTitles(keys);
             selectedTitles.clear(); instPage::showQueue(); return;
         }
+        const nx::nexus::TargetChoices targets;
         int dialogResult = -1;
         if (this->selectedTitles.size() == 1) {
-            dialogResult = mainApp->CreateShowDialog("inst.target.desc0"_lang + inst::util::shortenString(std::filesystem::path(this->selectedTitles[0]).filename().string(), 32, true) + "inst.target.desc1"_lang, "common.cancel_desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
-        } else dialogResult = mainApp->CreateShowDialog("inst.target.desc00"_lang + std::to_string(this->selectedTitles.size()) + "inst.target.desc01"_lang, "common.cancel_desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
-        if (dialogResult == -1) return;
-        hddInstStuff::installNspFromFile(this->selectedTitles, dialogResult, this->ourFiles);
+            dialogResult = mainApp->CreateShowDialog("inst.target.desc0"_lang + inst::util::shortenString(std::filesystem::path(this->selectedTitles[0]).filename().string(), 32, true) + "inst.target.desc1"_lang, "common.cancel_desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
+        } else dialogResult = mainApp->CreateShowDialog("inst.target.desc00"_lang + std::to_string(this->selectedTitles.size()) + "inst.target.desc01"_lang, "common.cancel_desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
+        if (dialogResult < 0) return;
+        hddInstStuff::installNspFromFile(this->selectedTitles, targets.at(dialogResult), this->ourFiles);
     }
 
     void hddInstPage::onInput(u64 Down, u64 Up, u64 Held, pu::ui::Touch Pos) {

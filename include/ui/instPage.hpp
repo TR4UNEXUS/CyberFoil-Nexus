@@ -1,4 +1,5 @@
 #pragma once
+#include "ui/UsbSpaceCard.hpp"
 #include <cstdint>
 #include <chrono>
 #include <unordered_map>
@@ -42,6 +43,7 @@ namespace inst::ui {
             Rectangle::Ref sysBarFill;
             Rectangle::Ref sdBarBack;
             Rectangle::Ref sdBarFill;
+            UsbSpaceCard usbCard;
             Rectangle::Ref netIndicator;
             Rectangle::Ref wifiBar1;
             Rectangle::Ref wifiBar2;

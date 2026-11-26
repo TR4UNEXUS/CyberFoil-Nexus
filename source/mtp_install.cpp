@@ -116,7 +116,7 @@ public:
 
 class MtpNspStream final : public StreamInstaller {
 public:
-    explicit MtpNspStream(std::uint64_t total_size, NcmStorageId dest_storage);
+    explicit MtpNspStream(std::uint64_t total_size, nx::nexus::Target dest_storage);
     ~MtpNspStream() override;
 
     bool Feed(const void* buf, size_t size, std::uint64_t offset) override;
@@ -144,7 +144,7 @@ private:
     bool WriteEntryData(EntryState& entry, const std::uint8_t* data, size_t size, std::uint64_t rel_offset);
     bool CommitCnmt(EntryState& entry);
 
-    NcmStorageId m_dest_storage = NcmStorageId_SdCard;
+    nx::nexus::Target m_dest_storage = nx::nexus::sd;
     std::uint64_t m_total_size = 0;
     std::uint64_t m_received = 0;
     std::vector<std::uint8_t> m_header_bytes;
@@ -160,7 +160,7 @@ std::unique_ptr<StreamInstaller> g_stream;
 
 class StreamInstallHelper final : public tin::install::Install {
 public:
-    StreamInstallHelper(NcmStorageId dest_storage, bool ignore_req)
+    StreamInstallHelper(nx::nexus::Target dest_storage, bool ignore_req)
         : Install(dest_storage, ignore_req) {}
 
     void AddContentMeta(const nx::ncm::ContentMeta& meta, const NcmContentInfo& info) {
@@ -212,7 +212,7 @@ bool IsNspName(const std::string& name) {
     return ext == ".nsp" || ext == ".nsz";
 }
 
-MtpNspStream::MtpNspStream(std::uint64_t total_size, NcmStorageId dest_storage)
+MtpNspStream::MtpNspStream(std::uint64_t total_size, nx::nexus::Target dest_storage)
     : m_dest_storage(dest_storage), m_total_size(total_size)
 {
     m_helper = std::make_unique<StreamInstallHelper>(dest_storage, inst::config::ignoreReqVers);
@@ -278,11 +278,11 @@ bool MtpNspStream::EnsureEntryStarted(EntryState& entry)
     }
 
     entry.storage = std::make_shared<nx::ncm::ContentStorage>(m_dest_storage);
-    if (entry.storage->Has(entry.nca_id)) {
+    if (entry.storage->CanReuse(entry.nca_id)) {
         entry.started = true;
         return true;
     }
-    m_helper->TrackNca(entry.nca_id);
+    if (!m_dest_storage.usb()) m_helper->TrackNca(entry.nca_id);
     try {
         entry.storage->DeletePlaceholder(*(NcmPlaceHolderId*)&entry.nca_id);
     } catch (...) {}
@@ -300,8 +300,7 @@ bool MtpNspStream::CommitCnmt(EntryState& entry)
     if (!entry.is_cnmt || !entry.storage) return false;
 
     try {
-        std::string cnmt_path = entry.storage->GetPath(entry.nca_id);
-        nx::ncm::ContentMeta meta = tin::util::GetContentMetaFromNCA(cnmt_path);
+        nx::ncm::ContentMeta meta = entry.storage->ReadContentMeta(entry.nca_id);
         {
             const auto key = meta.GetContentMetaKey();
             const auto base_id = tin::util::GetBaseTitleId(key.id, static_cast<NcmContentMetaType>(key.type));
@@ -378,6 +377,7 @@ bool MtpNspStream::WriteEntryData(EntryState& entry, const std::uint8_t* data, s
             entry.nca_writer->close();
             try {
                 entry.storage->Register(*(NcmPlaceHolderId*)&entry.nca_id, entry.nca_id);
+                if (m_dest_storage.usb()) m_helper->TrackNca(entry.nca_id);
             } catch (...) { return false; }
             try { entry.storage->DeletePlaceholder(*(NcmPlaceHolderId*)&entry.nca_id); } catch (...) {}
         }
@@ -742,12 +742,12 @@ static bool GetXciCollections(MtpStreamSource& source, std::vector<StreamCollect
 
 class MtpXciStreamPull final : public StreamInstaller {
 public:
-    explicit MtpXciStreamPull(std::uint64_t total_size, NcmStorageId dest_storage)
+    explicit MtpXciStreamPull(std::uint64_t total_size, nx::nexus::Target dest_storage)
         : m_dest_storage(dest_storage), m_total_size(total_size), m_buffer(8 * 1024 * 1024) {
         m_helper = std::make_unique<StreamInstallHelper>(dest_storage, inst::config::ignoreReqVers);
         StreamTrace("XCI ctor total=%llu storage=%u",
             static_cast<unsigned long long>(total_size),
-            static_cast<unsigned>(dest_storage));
+            static_cast<unsigned>(dest_storage.logical));
         m_thread = std::thread([this]() {
             MtpStreamSource source(m_buffer);
             bool ok = false;
@@ -834,11 +834,11 @@ private:
         }
 
         entry.storage = std::make_shared<nx::ncm::ContentStorage>(m_dest_storage);
-    if (entry.storage->Has(entry.nca_id)) {
+    if (entry.storage->CanReuse(entry.nca_id)) {
         entry.started = true;
         return true;
     }
-    m_helper->TrackNca(entry.nca_id);
+    if (!m_dest_storage.usb()) m_helper->TrackNca(entry.nca_id);
         try {
             entry.storage->DeletePlaceholder(*(NcmPlaceHolderId*)&entry.nca_id);
         } catch (...) {}
@@ -851,8 +851,7 @@ private:
         if (!entry.is_cnmt || !entry.storage) return false;
 
         try {
-            std::string cnmt_path = entry.storage->GetPath(entry.nca_id);
-            nx::ncm::ContentMeta meta = tin::util::GetContentMetaFromNCA(cnmt_path);
+            nx::ncm::ContentMeta meta = entry.storage->ReadContentMeta(entry.nca_id);
             {
                 const auto key = meta.GetContentMetaKey();
                 const auto base_id = tin::util::GetBaseTitleId(key.id, static_cast<NcmContentMetaType>(key.type));
@@ -896,6 +895,7 @@ private:
                 entry.nca_writer->close();
                 try {
                     entry.storage->Register(*(NcmPlaceHolderId*)&entry.nca_id, entry.nca_id);
+                    if (m_dest_storage.usb()) m_helper->TrackNca(entry.nca_id);
                 } catch (...) { return false; }
                 try { entry.storage->DeletePlaceholder(*(NcmPlaceHolderId*)&entry.nca_id); } catch (...) {}
             }
@@ -1006,7 +1006,7 @@ private:
         }
     }
 
-    NcmStorageId m_dest_storage = NcmStorageId_SdCard;
+    nx::nexus::Target m_dest_storage = nx::nexus::sd;
     std::uint64_t m_total_size = 0;
     std::uint64_t m_received = 0;
     MtpStreamBuffer m_buffer;
@@ -1018,21 +1018,21 @@ private:
 
 } // namespace
 
-bool StartStreamInstall(const std::string& name, std::uint64_t size, int storage_choice)
+bool StartStreamInstall(const std::string& name, std::uint64_t size, nx::nexus::Target storage_choice)
 {
     g_stream_trace_enabled.store(std::filesystem::exists(kStreamTraceEnablePath), std::memory_order_relaxed);
     ResetStreamTrace();
     StreamTrace("Start name='%s' size=%llu storage_choice=%d",
         name.c_str(),
         static_cast<unsigned long long>(size),
-        storage_choice);
+        static_cast<int>(storage_choice.logical));
     {
         std::lock_guard<std::mutex> lock(g_stream_mutex);
         g_stream.reset();
     }
 
-    NcmStorageId storage = (storage_choice == 1) ? NcmStorageId_BuiltInUser : NcmStorageId_SdCard;
-    {
+    const auto storage = storage_choice;
+    try {
         std::lock_guard<std::mutex> lock(g_stream_mutex);
         g_stream_name = name;
         if (IsNspName(name)) {
@@ -1051,6 +1051,15 @@ bool StartStreamInstall(const std::string& name, std::uint64_t size, int storage
             StreamTrace("Start unsupported extension name='%s'", name.c_str());
             return false;
         }
+    } catch (const std::exception& e) {
+        StreamTrace("Could not start installation: %s", e.what());
+        std::lock_guard<std::mutex> lock(g_stream_mutex);
+        g_stream_name.clear();
+        g_stream_total.store(0);
+        g_stream_received.store(0);
+        g_stream_active.store(false);
+        g_stream_complete.store(false);
+        return false;
     }
 
     g_stream_total.store(size, std::memory_order_relaxed);

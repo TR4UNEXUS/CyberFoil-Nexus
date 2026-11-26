@@ -1,12 +1,13 @@
 #pragma once
 
+#include "nx/nexus_usb.hpp"
 #include <cstdint>
 #include <cstddef>
 #include <string>
 
 namespace inst::mtp {
 
-bool StartStreamInstall(const std::string& name, std::uint64_t size, int storage_choice);
+bool StartStreamInstall(const std::string& name, std::uint64_t size, nx::nexus::Target storage_choice);
 bool WriteStreamInstall(const void* buf, size_t size, std::uint64_t offset);
 void CloseStreamInstall();
 void CancelStreamInstall();

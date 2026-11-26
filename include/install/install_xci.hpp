@@ -22,6 +22,7 @@ SOFTWARE.
 
 #pragma once
 
+#include "nx/nexus_usb.hpp"
 #include <switch.h>
 #include "install/install.hpp"
 #include "install/xci.hpp"
@@ -41,7 +42,7 @@ namespace tin::install::xci
             void InstallTicketCert() override;
 
         public:
-            XCIInstallTask(NcmStorageId destStorageId, bool ignoreReqFirmVersion, const std::shared_ptr<XCI>& xci);
+            XCIInstallTask(nx::nexus::Target destStorageId, bool ignoreReqFirmVersion, const std::shared_ptr<XCI>& xci);
     };
 };
 

@@ -68,8 +68,10 @@ do not use the software.
 	implied warranties of merchantability, fitness for a particular
 	purpose and non-infringement.
 */
+#include "nx/nexus_usb.hpp"
 #include "nx/usbhdd.h"
 #include <threads.h>
+#include <cstdio>
 
 #include <algorithm>
 #include <mutex>
@@ -79,6 +81,7 @@ do not use the software.
 
 namespace nx::hdd
 {
+    static bool nexusDriver = false;
     static constexpr u32 kMaxDevices = 32;
     static UEvent* g_statusChangeEvent = nullptr;
     static UEvent g_exitEvent = {0};
@@ -135,11 +138,20 @@ namespace nx::hdd
 
     u32 count()
     {
+        if (nexusDriver) return nx::nexus::drive().generation ? 1 : 0;
+        std::scoped_lock lock(g_mutex);
         return std::min(g_usbDeviceCount, kMaxDevices);
     }
 
     const char* rootPath(u32 index)
     {
+        if (nexusDriver) {
+            const u64 generation = nx::nexus::drive().generation;
+            if (index != 0 || !generation) return nullptr;
+            static thread_local char root[32];
+            std::snprintf(root, sizeof(root), "nexus:/%016llx", static_cast<unsigned long long>(generation));
+            return root;
+        }
         if (index >= kMaxDevices)
         {
             return nullptr;
@@ -162,6 +174,13 @@ namespace nx::hdd
             return true;
         }
 
+        const auto owner = nx::nexus::owner();
+        if (owner == nx::nexus::Owner::Unknown) return false;
+        if (owner == nx::nexus::Owner::Nexus) {
+            nexusDriver = nx::nexus::mountBrowser();
+            return nexusDriver;
+        }
+
         if (usbHsFsInitialize(0))
         {
             return false;
@@ -178,6 +197,11 @@ namespace nx::hdd
 
     bool exit()
     {
+        if (nexusDriver) {
+            nx::nexus::closeBrowser();
+            nexusDriver = false;
+            return true;
+        }
         if (!g_statusChangeEvent)
         {
             return false;

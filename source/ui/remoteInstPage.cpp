@@ -1266,6 +1266,7 @@ namespace inst::ui {
         this->Add(this->sysBarFill);
         this->Add(this->sdBarBack);
         this->Add(this->sdBarFill);
+        this->usbCard.attach(*this);
         this->Add(this->sysLabelText);
         this->Add(this->sysFreeText);
         this->Add(this->sdLabelText);
@@ -4780,14 +4781,15 @@ namespace inst::ui {
             }
         }
 
+        const nx::nexus::TargetChoices targets;
         int dialogResult = -1;
         if (this->selectedItems.size() == 1) {
             std::string name = inst::util::shortenString(this->selectedItems[0].name, 32, true);
-            dialogResult = mainApp->CreateShowDialog("inst.target.desc0"_lang + name + "inst.target.desc1"_lang, "common.cancel_desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
+            dialogResult = mainApp->CreateShowDialog("inst.target.desc0"_lang + name + "inst.target.desc1"_lang, "common.cancel_desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
         } else {
-            dialogResult = mainApp->CreateShowDialog("inst.target.desc00"_lang + std::to_string(this->selectedItems.size()) + "inst.target.desc01"_lang, "common.cancel_desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
+            dialogResult = mainApp->CreateShowDialog("inst.target.desc00"_lang + std::to_string(this->selectedItems.size()) + "inst.target.desc01"_lang, "common.cancel_desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
         }
-        if (dialogResult == -1) {
+        if (dialogResult < 0) {
             if (!autoAddedItems.empty()) {
                 auto matchesItem = [](const remoteInstStuff::RemoteItem& lhs, const remoteInstStuff::RemoteItem& rhs) {
                     if (!lhs.url.empty() && !rhs.url.empty())
@@ -4816,7 +4818,7 @@ namespace inst::ui {
         }
 
         this->updateRememberedSelection();
-        remoteInstStuff::installTitleRemote(this->selectedItems, dialogResult, "inst.remote.source_string"_lang, getQueueCatalog());
+        remoteInstStuff::installTitleRemote(this->selectedItems, targets.at(dialogResult), "inst.remote.source_string"_lang, getQueueCatalog());
         this->refreshAfterInstall();
     }
 

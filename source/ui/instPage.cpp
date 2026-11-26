@@ -248,6 +248,7 @@ namespace inst::ui {
         this->Add(this->sysBarFill);
         this->Add(this->sdBarBack);
         this->Add(this->sdBarFill);
+        this->usbCard.attach(*this);
         this->Add(this->sysLabelText);
         this->Add(this->sysFreeText);
         this->Add(this->sdLabelText);

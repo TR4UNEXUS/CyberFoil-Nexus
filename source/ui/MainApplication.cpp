@@ -563,7 +563,7 @@ namespace inst::ui {
                     ncmContentStorageGetFreeSpaceSize(&storage, &systemFree);
                     ncmContentStorageClose(&storage);
                 }
-                rc = ncmOpenContentStorage(&storage, NcmStorageId_SdCard);
+                rc = nx::nexus::openStorage(storage, nx::nexus::sd);
                 if (R_SUCCEEDED(rc)) {
                     ncmContentStorageGetTotalSpaceSize(&storage, &sdTotalBytes);
                     ncmContentStorageGetFreeSpaceSize(&storage, &sdFreeBytes);
@@ -572,7 +572,9 @@ namespace inst::ui {
                 ncmExit();
             }
 
-            const int cardWidth = 180;
+            const auto usb = nx::nexus::drive(true);
+            const int cardWidth = 148;
+            int usbX = 0;
             const int cardGap = 12;
             const int timeY = 24;
             const int iconY = 50;
@@ -679,7 +681,8 @@ namespace inst::ui {
                     batteryFill->SetColor((batteryPct >= 0 && batteryPct <= 20) ? COLOR("#FF3B30FF") : COLOR("#4CD964FF"));
                 }
 
-                int sdX = cardsRight - cardWidth;
+                usbX = cardsRight - cardWidth;
+                int sdX = usbX - cardGap - cardWidth;
                 int sysX = sdX - cardGap - cardWidth;
 
                 if (ipText) {
@@ -690,7 +693,7 @@ namespace inst::ui {
                     int ipX = sysX - cardGap - ipWidth;
                     if (ipX < 10) ipX = 10;
                     ipText->SetX(ipX);
-                    ipText->SetY(cardsTopY);
+                    ipText->SetY(freeY);
                 }
 
                 if (sysLabel) {
@@ -702,6 +705,7 @@ namespace inst::ui {
                     sysFree->SetY(freeY);
                 }
                 if (sysBarBack) {
+                    sysBarBack->SetWidth(cardWidth);
                     sysBarBack->SetX(sysX);
                     sysBarBack->SetY(barY);
                 }
@@ -719,6 +723,7 @@ namespace inst::ui {
                     sdFree->SetY(freeY);
                 }
                 if (sdBarBack) {
+                    sdBarBack->SetWidth(cardWidth);
                     sdBarBack->SetX(sdX);
                     sdBarBack->SetY(barY);
                 }
@@ -744,7 +749,7 @@ namespace inst::ui {
                         char buf[64] = {0};
                         if (totalBytes > 0) {
                             double freeGb = static_cast<double>(freeBytes) / (1024.0 * 1024.0 * 1024.0);
-                            std::snprintf(buf, sizeof(buf), "Free Space %.1f GB", freeGb);
+                            std::snprintf(buf, sizeof(buf), "%.1f GiB free", freeGb);
                         } else {
                             std::snprintf(buf, sizeof(buf), "Free Space --");
                         }
@@ -774,6 +779,7 @@ namespace inst::ui {
                             page->sdLabelText, page->sdFreeText, page->sdBarBack, page->sdBarFill,
                             page->netIndicator, page->wifiBar1, page->wifiBar2, page->wifiBar3,
                             page->batteryOutline, page->batteryFill, page->batteryCap);
+                page->usbCard.update(usbX, cardWidth, usb);
                 updateCards(page->sysLabelText, page->sysFreeText, page->sysBarBack, page->sysBarFill,
                             page->sdLabelText, page->sdFreeText, page->sdBarBack, page->sdBarFill);
             };

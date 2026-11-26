@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ui/UsbSpaceCard.hpp"
 #include <pu/Plutonium>
 #include "remoteInstall.hpp"
 #include "ui/bottomHint.hpp"
@@ -50,6 +51,7 @@ namespace inst::ui {
             Rectangle::Ref sysBarFill;
             Rectangle::Ref sdBarBack;
             Rectangle::Ref sdBarFill;
+            UsbSpaceCard usbCard;
             Rectangle::Ref netIndicator;
             Rectangle::Ref wifiBar1;
             Rectangle::Ref wifiBar2;

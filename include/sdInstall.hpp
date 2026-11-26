@@ -21,8 +21,9 @@ SOFTWARE.
 */
 
 #pragma once
+#include "nx/nexus_usb.hpp"
 #include <filesystem>
 #include <vector>
 namespace nspInstStuff {
-    void installNspFromFile(std::vector<std::filesystem::path> ourNspList, int whereToInstall, const std::vector<std::filesystem::path>& availableTitles = {});
+    void installNspFromFile(std::vector<std::filesystem::path> ourNspList, nx::nexus::Target whereToInstall, const std::vector<std::filesystem::path>& availableTitles = {});
 }

@@ -135,7 +135,7 @@ namespace netInstStuff{
             tin::network::NSULDrop(url);
     }
 
-    void installTitleNet(std::vector<std::string> ourUrlList, int ourStorage, std::vector<std::string> urlListAltNames, std::string ourSource)
+    void installTitleNet(std::vector<std::string> ourUrlList, nx::nexus::Target ourStorage, std::vector<std::string> urlListAltNames, std::string ourSource)
     {
         if (ourUrlList.empty()) return;
         if (inst::ui::mainApp->IsUiThread()) {
@@ -145,10 +145,9 @@ namespace netInstStuff{
         inst::util::initInstallServices();
         inst::ui::instPage::loadInstallScreen();
         bool nspInstalled = true;
-        NcmStorageId m_destStorageId = NcmStorageId_SdCard;
+        const auto m_destStorageId = ourStorage;
         std::string currentName;
 
-        if (ourStorage) m_destStorageId = NcmStorageId_BuiltInUser;
         size_t completedCount = 0;
         inst::diag::StartSession("network", ourUrlList.size());
 

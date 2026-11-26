@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 #include "util/file_util.hpp"
+#include "util/error.hpp"
 
 #include <memory>
 
@@ -41,6 +42,8 @@ namespace tin::util
 
         // Find and read the cnmt file
         auto cnmtName = cnmtNCASimpleFileSystem.GetFileNameFromExtension("", "cnmt");
+        if (cnmtName.empty())
+            THROW_FORMAT("The content archive contains no CNMT manifest");
         auto cnmtFile = cnmtNCASimpleFileSystem.OpenFile(cnmtName);
         u64 cnmtSize = cnmtFile.GetSize();
 

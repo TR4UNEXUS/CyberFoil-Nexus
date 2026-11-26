@@ -81,6 +81,7 @@ namespace inst::ui {
         this->Add(this->sysBarFill);
         this->Add(this->sdBarBack);
         this->Add(this->sdBarFill);
+        this->usbCard.attach(*this);
         this->Add(this->sysLabelText);
         this->Add(this->sysFreeText);
         this->Add(this->sdLabelText);
@@ -195,12 +196,13 @@ namespace inst::ui {
             instPage::enqueueTitles(keys);
             selectedTitles.clear(); instPage::showQueue(); return;
         }
+        const nx::nexus::TargetChoices targets;
         int dialogResult = -1;
         if (this->selectedTitles.size() == 1) {
-            dialogResult = mainApp->CreateShowDialog("inst.target.desc0"_lang + inst::util::shortenString(std::filesystem::path(this->selectedTitles[0]).filename().string(), 32, true) + "inst.target.desc1"_lang, "common.cancel_desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
-        } else dialogResult = mainApp->CreateShowDialog("inst.target.desc00"_lang + std::to_string(this->selectedTitles.size()) + "inst.target.desc01"_lang, "common.cancel_desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
-        if (dialogResult == -1) return;
-        nspInstStuff::installNspFromFile(this->selectedTitles, dialogResult, this->ourFiles);
+            dialogResult = mainApp->CreateShowDialog("inst.target.desc0"_lang + inst::util::shortenString(std::filesystem::path(this->selectedTitles[0]).filename().string(), 32, true) + "inst.target.desc1"_lang, "common.cancel_desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
+        } else dialogResult = mainApp->CreateShowDialog("inst.target.desc00"_lang + std::to_string(this->selectedTitles.size()) + "inst.target.desc01"_lang, "common.cancel_desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
+        if (dialogResult < 0) return;
+        nspInstStuff::installNspFromFile(this->selectedTitles, targets.at(dialogResult), this->ourFiles);
     }
 
     void sdInstPage::onInput(u64 Down, u64 Up, u64 Held, pu::ui::Touch Pos) {

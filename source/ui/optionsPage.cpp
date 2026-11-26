@@ -307,6 +307,7 @@ namespace inst::ui {
         this->Add(this->sysBarFill);
         this->Add(this->sdBarBack);
         this->Add(this->sdBarFill);
+        this->usbCard.attach(*this);
         this->Add(this->sysLabelText);
         this->Add(this->sysFreeText);
         this->Add(this->sdLabelText);
@@ -546,46 +547,37 @@ namespace inst::ui {
         }
     }
 
-    void optionsPage::askToUpdate(std::vector<std::string> updateInfo) {
-            const std::string version = updateInfo.empty() ? std::string() : updateInfo[0];
-            const std::string downloadUrl = updateInfo.size() > 1 ? updateInfo[1] : std::string();
-            const std::string releaseNotes = updateInfo.size() > 2 ? updateInfo[2] : "No changelog available for this release.";
-
-            while (true) {
-                int choice = mainApp->CreateShowDialog(
-                    "options.update.title"_lang,
-                    "options.update.desc0"_lang + version + "options.update.desc1"_lang,
-                    {"options.update.opt0"_lang, "View Changelog", "common.cancel"_lang},
-                    false);
-
-                if (choice == 1) {
-                    ShowPagedTextDialog("Changelog " + version, releaseNotes);
-                    continue;
-                }
-
-                if (choice != 0)
-                    break;
-
-                inst::ui::instPage::loadInstallScreen();
-                inst::ui::instPage::setTopInstInfoText("options.update.top_info"_lang + version);
-                inst::ui::instPage::setInstBarPerc(0);
-                inst::ui::instPage::setInstInfoText("options.update.bot_info"_lang + version);
-                try {
-                    std::string downloadName = inst::config::appDir + "/temp_download.zip";
-                    inst::curl::downloadFile(downloadUrl, downloadName.c_str(), 0, true);
-                    romfsExit();
-                    inst::ui::instPage::setInstInfoText("options.update.bot_info2"_lang + version);
-                    inst::zip::extractFile(downloadName, "sdmc:/");
-                    std::filesystem::remove(downloadName);
-                    mainApp->CreateShowDialog("options.update.complete"_lang, "options.update.end_desc"_lang, {"common.ok"_lang}, false);
-                } catch (...) {
-                    mainApp->CreateShowDialog("options.update.failed"_lang, "options.update.end_desc"_lang, {"common.ok"_lang}, false);
-                }
-                mainApp->FadeOut();
-                mainApp->Close();
-                break;
+    void optionsPage::askToUpdate(const inst::update::Release& release) {
+        const auto title = "CyberFoil Nexus " + release.version;
+        for (;;) {
+            int choice = mainApp->CreateShowDialog(title, "Nexus update " + std::to_string(release.revision) +
+                " is available. Install it and restart CyberFoil Nexus?",
+                {"Install update", "View changes", "Later"}, true);
+            if (choice == 1) {
+                ShowPagedTextDialog(title, release.notes.empty() ? "No release notes provided." : release.notes);
+                continue;
             }
-        return;
+            if (choice != 0) return;
+            bool ready = false;
+            std::string error;
+            mainApp->RunInstallWork([&] {
+                try {
+                    instPage::setTopInstInfoText("Updating " + title);
+                    instPage::setInstInfoText("Downloading and checking the update");
+                    inst::update::install(release, [](unsigned percent) {
+                        instPage::setInstBarPerc(percent);
+                        return !instPage::isInstallCancelRequested();
+                    });
+                    ready = true;
+                } catch (const std::exception& e) { error = e.what(); }
+            });
+            if (ready) mainApp->Close();
+            else {
+                mainApp->LoadLayout(mainApp->optionspage);
+                mainApp->CreateShowDialog("Update stopped", error, {"OK"}, false);
+            }
+            return;
+        }
     }
 
     std::string optionsPage::getMenuOptionIcon(bool ourBool) {
@@ -1317,7 +1309,6 @@ namespace inst::ui {
             }
             std::string keyboardResult;
             int rc;
-            std::vector<std::string> downloadUrl;
             std::vector<std::string> languageList;
             int selectedIndex = this->menu->GetSelectedIndex();
             if (this->selectedSection == 0) {
@@ -1668,16 +1659,12 @@ namespace inst::ui {
                     mainApp->Close();
                     break;
                 case 17:
-                    if (inst::util::getIPAddress() == "1.0.0.127") {
-                        inst::ui::mainApp->CreateShowDialog("main.net.title"_lang, "main.net.desc"_lang, {"common.ok"_lang}, true);
-                        break;
+                    try {
+                        if (const auto release = inst::update::check()) askToUpdate(*release);
+                        else mainApp->CreateShowDialog("CyberFoil Nexus", "You have the latest Nexus update.", {"OK"}, false);
+                    } catch (const std::exception& e) {
+                        mainApp->CreateShowDialog("Could not check for updates", e.what(), {"OK"}, false);
                     }
-                    downloadUrl = inst::util::checkForAppUpdate();
-                    if (!downloadUrl.size()) {
-                        mainApp->CreateShowDialog("options.update.title_check_fail"_lang, "options.update.desc_check_fail"_lang, {"common.ok"_lang}, false);
-                        break;
-                    }
-                    this->askToUpdate(downloadUrl);
                     break;
                 case 18:
                     inst::ui::mainApp->CreateShowDialog("options.credits.title"_lang, "options.credits.desc"_lang, {"common.close"_lang}, true);

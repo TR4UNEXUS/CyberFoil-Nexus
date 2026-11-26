@@ -77,10 +77,8 @@ namespace tin::install::nsp
             }
             else if (dirEntry.type == FsDirEntryType_File)
             {
-                auto foundExtension = dirEntryName.substr(dirEntryName.find(".") + 1); 
-
-                if (foundExtension == extension)
-                    return dirEntryName;
+                if (dirEntryName.ends_with("." + extension))
+                    return path + dirEntryName;
             }
         }
 

@@ -68,7 +68,7 @@ struct InstallSharedData {
 InstallSharedData g_shared;
 bool g_running = false;
 std::mutex g_state_mutex;
-int g_storage_choice = 0;
+nx::nexus::Target g_storage_choice = nx::nexus::sd;
 bool g_ncm_ready = false;
 bool g_awoo_suspended = false;
 
@@ -266,9 +266,8 @@ struct FsProxyVfs : haze::FileSystemProxyImpl {
 
 protected:
     Result QuerySpace(s64* out_total, s64* out_free) const {
-        const auto storage_id = (g_storage_choice == 1) ? NcmStorageId_BuiltInUser : NcmStorageId_SdCard;
         NcmContentStorage storage{};
-        Result rc = ncmOpenContentStorage(&storage, storage_id);
+        Result rc = nx::nexus::openStorage(storage, g_storage_choice);
         if (R_FAILED(rc)) return rc;
         if (out_total) {
             rc = ncmContentStorageGetTotalSpaceSize(&storage, out_total);
@@ -644,7 +643,7 @@ private:
 
     static Result QuerySdSpace(s64* out_total, s64* out_free) {
         NcmContentStorage storage{};
-        Result rc = ncmOpenContentStorage(&storage, NcmStorageId_SdCard);
+        Result rc = nx::nexus::openStorage(storage, nx::nexus::sd);
         if (R_FAILED(rc)) return rc;
         if (out_total) rc = ncmContentStorageGetTotalSpaceSize(&storage, out_total);
         if (R_SUCCEEDED(rc) && out_free) rc = ncmContentStorageGetFreeSpaceSize(&storage, out_free);
@@ -675,7 +674,7 @@ haze::FsEntries g_entries;
 
 } // namespace
 
-bool StartInstallServer(int storage_choice)
+bool StartInstallServer(nx::nexus::Target storage_choice)
 {
     if (IsInstallServerRunning()) {
         StopInstallServer();

@@ -4,6 +4,7 @@
 #include <functional>
 
 namespace inst::curl {
+    bool initialize();
     using DownloadProgressCallback = std::function<void(std::uint64_t downloaded, std::uint64_t total)>;
     const std::string& getDefaultUserAgent();
     const std::string& getDownloadUserAgent();

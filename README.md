@@ -1,4 +1,23 @@
-# CyberFoil
+# CyberFoil Nexus
+
+[Download CyberFoil Nexus for Switch](https://github.com/TR4UNEXUS/CyberFoil-Nexus/releases/latest)
+
+This Switch build adds Nexus USB storage to [CyberFoil 1.5.1](https://github.com/luketanti/CyberFoil/releases/tag/1.5.1). Extract the app ZIP to the microSD root and launch **CyberFoil Nexus** from hbmenu. The app uses your existing CyberFoil settings.
+
+On Nexus HATS NX1, the top bar shows the external drive’s free space and usage. **Install from USB Drive** browses packages on that drive. After selecting a package, choose **SD Card**, **Internal Storage** or **USB Drive**. USB appears when the firmware reports a ready drive. A queued USB install stays tied to that drive connection. Reopen the browser and select the files again after reconnecting.
+
+During a USB install, CyberFoil briefly copies the game's content manifest to internal storage so the Switch can read it, then removes the temporary copy. The game data stays on the USB drive.
+
+CyberFoil Nexus checks for updates on startup when automatic checks are enabled. You can also check in **Options**. Install the first updater-enabled release manually if you used an earlier local build. Future updates replace the NRO you launched and keep your settings.
+
+### Building and releasing
+
+Build with the upstream devkitPro setup and `make -j4 RELEASE=1` after initializing the Plutonium submodule. Run the host regression suite with `make -C tests test`. Encrypted Remote catalogue responses require a separate private upstream component.
+
+Keep `APP_VERSION` in the Makefile aligned with official CyberFoil. Update `RELEASE_NOTES.md` with the user-facing changes when pushing app changes to `main`. GitHub Actions builds, tests and publishes the ZIP and NRO. The release title and hbmenu use the official version. Tags such as `v1.5.1-nexus.1` carry a separate revision assigned by the workflow so users receive fixes between upstream releases. To reproduce a published revision locally, pass its number to Make, for example `make -j4 RELEASE=1 NEXUS_REVISION=1`.
+
+## Upstream project
+
 [![Latest version](https://img.shields.io/github/v/release/luketanti/CyberFoil?label=version)](https://github.com/luketanti/CyberFoil/releases/latest)
 ![GitHub all releases downloads](https://img.shields.io/github/downloads/luketanti/CyberFoil/total)
 ![GitHub latest release downloads](https://img.shields.io/github/downloads/luketanti/CyberFoil/latest/total)

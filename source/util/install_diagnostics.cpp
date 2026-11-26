@@ -128,6 +128,21 @@ namespace inst::diag {
             return failure;
         }
 
+        const bool archiveOpen = ContainsAny(lower, {"openfilesystemwithid", "failed to open file system with id"});
+        if (failure.code == "0x00000202") {
+            failure.category = "Storage path not found";
+            failure.summary = archiveOpen ? "The system could not find the content archive at the requested storage path."
+                                          : "The system could not find a required file or folder.";
+            failure.recommendation = "Keep the selected storage connected. If it happens again, share the install log with the missing path.";
+            return failure;
+        }
+        if (ContainsAny(lower, {"temporary manifest", "manifest archive on the selected usb drive", "manifest from the selected usb drive"})) {
+            failure.category = "Content manifest";
+            failure.summary = "The installer could not prepare the game's USB manifest.";
+            failure.recommendation = "Check the USB connection and available internal storage. The install log records the failed operation.";
+            return failure;
+        }
+
         if (ContainsAny(lower, {"signature", "master key", "key mismatch", "failed to import ticket", "ticket / cert", "tik", "cert", "rights id"})) {
             failure.category = "Signature/Keys issue";
             failure.summary = "[ERROR] Missing required keys or invalid signatures.";
@@ -148,13 +163,18 @@ namespace inst::diag {
                 "outdated firmware",
                 "hos update required",
                 "required system firmware",
-                "too low to decrypt",
-                "openfilesystemwithid",
-                "failed to open file system with id"
+                "too low to decrypt"
             }) || lower.find("0x001fd602") != std::string::npos) {
             failure.category = "Unsupported format / Firmware mismatch";
             failure.summary = "[ERROR] Can't parse NCA. Outdated firmware. HOS update required.";
             failure.recommendation = "Update firmware/patches or use compatible content.";
+            return failure;
+        }
+
+        if (archiveOpen) {
+            failure.category = "Content archive";
+            failure.summary = "The system could not open the content archive.";
+            failure.recommendation = "Share the install log and result code to identify the failed lookup.";
             return failure;
         }
 

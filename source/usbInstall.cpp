@@ -90,7 +90,7 @@ namespace usbInstStuff {
         return titleNames;
     }
 
-    void installTitleUsb(std::vector<std::string> ourTitleList, int ourStorage)
+    void installTitleUsb(std::vector<std::string> ourTitleList, nx::nexus::Target ourStorage)
     {
         if (ourTitleList.empty()) return;
         if (inst::ui::mainApp->IsUiThread()) {
@@ -100,10 +100,9 @@ namespace usbInstStuff {
         inst::util::initInstallServices();
         inst::ui::instPage::loadInstallScreen();
         bool nspInstalled = true;
-        NcmStorageId m_destStorageId = NcmStorageId_SdCard;
+        const auto m_destStorageId = ourStorage;
         std::string currentName;
 
-        if (ourStorage) m_destStorageId = NcmStorageId_BuiltInUser;
         size_t completedCount = 0;
         inst::diag::StartSession("usb", ourTitleList.size());
 

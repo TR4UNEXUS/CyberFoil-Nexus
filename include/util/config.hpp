@@ -32,7 +32,6 @@ namespace inst::config {
     extern std::string remotePass;
     extern std::string httpUserAgentMode;
     extern std::string httpUserAgent;
-    extern std::vector<std::string> updateInfo;
     extern int languageSetting;
     extern bool ignoreReqVers;
     extern bool validateNCAs;

@@ -39,9 +39,10 @@ SOFTWARE.
 // TODO: Check tik/cert is present
 namespace tin::install
 {
-    Install::Install(NcmStorageId destStorageId, bool ignoreReqFirmVersion) :
+    Install::Install(nx::nexus::Target destStorageId, bool ignoreReqFirmVersion) :
         m_destStorageId(destStorageId), m_ignoreReqFirmVersion(ignoreReqFirmVersion), m_contentMeta()
     {
+        ASSERT_OK(nx::nexus::checkUsbWrite(m_destStorageId), "USB drive changed or Nexus repair is pending");
         appletSetMediaPlaybackState(true);
     }
 
@@ -91,7 +92,7 @@ namespace tin::install
     {
         if (m_metaBackups.empty()) return;
         NcmContentMetaDatabase db{};
-        if (R_FAILED(ncmOpenContentMetaDatabase(&db, m_destStorageId))) return;
+        if (R_FAILED(ncmOpenContentMetaDatabase(&db, m_destStorageId.logical))) return;
         for (auto it = m_metaBackups.rbegin(); it != m_metaBackups.rend(); ++it) {
             const Result rc = it->existed
                 ? ncmContentMetaDatabaseSet(&db, &it->key, it->data.data(), it->data.size())
@@ -106,11 +107,16 @@ namespace tin::install
     void Install::InstallContentMetaRecords(tin::data::ByteBuffer& installContentMetaBuf, int i)
     {
         NcmContentMetaDatabase contentMetaDatabase{};
+        ASSERT_OK(nx::nexus::validate(m_destStorageId), "The selected USB drive is no longer connected");
         NcmContentMetaKey contentMetaKey = m_contentMeta[i].GetContentMetaKey();
+        if (m_destStorageId.usb()) {
+            nx::ncm::ContentStorage pinned(m_destStorageId);
+            for (const auto& file : m_contentMeta[i].GetContentInfos()) pinned.CheckUsbSize(file);
+        }
 
         try
         {
-            ASSERT_OK(ncmOpenContentMetaDatabase(&contentMetaDatabase, m_destStorageId), "Failed to open content meta database");
+            ASSERT_OK(ncmOpenContentMetaDatabase(&contentMetaDatabase, m_destStorageId.logical), "Failed to open content meta database");
             MetaBackup backup{contentMetaKey, false, {}};
             ASSERT_OK(ncmContentMetaDatabaseHas(&contentMetaDatabase, &backup.existed, &contentMetaKey), "Failed to check existing content meta");
             if (backup.existed) {
@@ -134,12 +140,13 @@ namespace tin::install
 
     void Install::InstallApplicationRecord(int i)
     {
+        ASSERT_OK(nx::nexus::validate(m_destStorageId), "The selected USB drive is no longer connected");
         const u64 baseTitleId = tin::util::GetBaseTitleId(this->GetTitleId(i), this->GetContentMetaType(i));
 
         // Add our new content meta
         ContentStorageRecord storageRecord;
         storageRecord.metaRecord = m_contentMeta[i].GetContentMetaKey();
-        storageRecord.storageId = m_destStorageId;
+        storageRecord.storageId = m_destStorageId.logical;
 
         LOG_DEBUG("Pushing application record...\n");
         ASSERT_OK(nsPushApplicationRecord(baseTitleId, NsApplicationRecordType_Installed, &storageRecord, 1), "Failed to push application record");
@@ -170,7 +177,7 @@ namespace tin::install
                     LOG_DEBUG("Installing CNMT NCA...\n");
                     inst::diag::NoteStep("Prepare phase: installing CNMT NCA " + tin::util::GetNcaIdString(cnmtContentRecord.content_id));
                     this->InstallNCA(cnmtContentRecord.content_id);
-                    TrackSessionInstalledNca(cnmtContentRecord.content_id);
+                    if (!m_destStorageId.usb()) TrackSessionInstalledNca(cnmtContentRecord.content_id);
                 }
                 else
                 {
@@ -204,7 +211,7 @@ namespace tin::install
                     if (inst::ui::instPage::isInstallCancelRequested())
                         THROW_FORMAT("Installation canceled.");
                     nx::ncm::ContentStorage contentStorage(m_destStorageId);
-                    if (contentStorage.Has(record.content_id)) {
+                    if (contentStorage.CanReuse(record.content_id)) {
                         LOG_DEBUG("NCA already installed. Skipping %s\n", tin::util::GetNcaIdString(record.content_id).c_str());
                         inst::diag::NoteStep("Install phase: skip existing NCA " + tin::util::GetNcaIdString(record.content_id));
                         continue;
@@ -213,7 +220,7 @@ namespace tin::install
                     LOG_DEBUG("Installing from %s\n", tin::util::GetNcaIdString(record.content_id).c_str());
                     inst::diag::NoteStep("Install phase: writing NCA " + tin::util::GetNcaIdString(record.content_id));
                     this->InstallNCA(record.content_id);
-                    TrackSessionInstalledNca(record.content_id);
+                    if (!m_destStorageId.usb()) TrackSessionInstalledNca(record.content_id);
                 }
             }
             if (inst::ui::instPage::isInstallCancelRequested()) THROW_FORMAT("Installation canceled.");

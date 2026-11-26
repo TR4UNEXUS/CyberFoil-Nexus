@@ -87,6 +87,7 @@ namespace inst::ui {
         this->Add(this->sysBarFill);
         this->Add(this->sdBarBack);
         this->Add(this->sdBarFill);
+        this->usbCard.attach(*this);
         this->Add(this->sysLabelText);
         this->Add(this->sysFreeText);
         this->Add(this->sdLabelText);
@@ -190,19 +191,20 @@ namespace inst::ui {
     }
 
     void netInstPage::startInstall(bool urlMode) {
+        const nx::nexus::TargetChoices targets;
         int dialogResult = -1;
         if (this->selectedUrls.size() == 1) {
             std::string ourUrlString;
             if (this->alternativeNames.size() > 0) ourUrlString = inst::util::shortenString(this->alternativeNames[0], 32, true);
             else ourUrlString = inst::util::shortenString(inst::util::formatUrlString(this->selectedUrls[0]), 32, true);
-            dialogResult = mainApp->CreateShowDialog("inst.target.desc0"_lang + ourUrlString + "inst.target.desc1"_lang, "common.cancel_desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
-        } else dialogResult = mainApp->CreateShowDialog("inst.target.desc00"_lang + std::to_string(this->selectedUrls.size()) + "inst.target.desc01"_lang, "common.cancel_desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
-        if (dialogResult == -1 && !urlMode) return;
-        else if (dialogResult == -1 && urlMode) {
+            dialogResult = mainApp->CreateShowDialog("inst.target.desc0"_lang + ourUrlString + "inst.target.desc1"_lang, "common.cancel_desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
+        } else dialogResult = mainApp->CreateShowDialog("inst.target.desc00"_lang + std::to_string(this->selectedUrls.size()) + "inst.target.desc01"_lang, "common.cancel_desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
+        if (dialogResult < 0 && !urlMode) return;
+        else if (dialogResult < 0 && urlMode) {
             this->startNetwork();
             return;
         }
-        netInstStuff::installTitleNet(this->selectedUrls, dialogResult, this->alternativeNames, sourceString);
+        netInstStuff::installTitleNet(this->selectedUrls, targets.at(dialogResult), this->alternativeNames, sourceString);
         return;
     }
 

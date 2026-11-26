@@ -1,0 +1,83 @@
+name: Publish CyberFoil Nexus
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'source/**'
+      - 'include/**'
+      - 'romfs/**'
+      - 'external/**'
+      - '.gitmodules'
+      - 'Makefile'
+      - '.github/workflows/nexus-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: nexus-stable-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -C tests test
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Build Switch app
+        shell: bash
+        run: |
+          set -euo pipefail
+          dkp-pacman -S --noconfirm --needed switch-ntfs-3g switch-lwext4
+          make -j2 RELEASE=1 NEXUS_REVISION="$GITHUB_RUN_NUMBER"
+      - name: Prepare assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/package_nexus_release.py cyberfoil.nro dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexus-release
+          path: dist/*
+          if-no-files-found: error
+  publish:
+    needs: [tests, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: nexus-release
+          path: dist
+      - name: Publish stable update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(awk '$1=="APP_VERSION" && $2==":=" {print $3;exit}' Makefile)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          tag="v${version}-nexus.${GITHUB_RUN_NUMBER}"
+          # A newer push can supersede a queued build. Only publish the current main commit.
+          head="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          if [[ "$head" != "$GITHUB_SHA" ]]; then exit 0; fi
+          if gh release view "$tag" --json isDraft --jq .isDraft > "$RUNNER_TEMP/nexus-draft" 2>/dev/null; then
+            if [[ "$(cat "$RUNNER_TEMP/nexus-draft")" == false ]]; then exit 0; fi
+          else
+            gh release create "$tag" --target "$GITHUB_SHA" --draft --title "CyberFoil Nexus $version" --notes-file RELEASE_NOTES.md
+          fi
+          gh release upload "$tag" dist/CyberFoil-Nexus.nro dist/CyberFoil-Nexus-*.zip --clobber
+          gh release edit "$tag" --draft=false --latest --prerelease=false

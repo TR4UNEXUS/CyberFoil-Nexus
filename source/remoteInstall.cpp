@@ -2537,7 +2537,7 @@ namespace remoteInstStuff {
     namespace {
         class StreamInstallHelper final : public tin::install::Install {
         public:
-            StreamInstallHelper(NcmStorageId dest_storage, bool ignore_req)
+            StreamInstallHelper(nx::nexus::Target dest_storage, bool ignore_req)
                 : Install(dest_storage, ignore_req) {}
 
             void AddContentMeta(const nx::ncm::ContentMeta& meta, const NcmContentInfo& info) {
@@ -2691,7 +2691,7 @@ namespace remoteInstStuff {
             return false;
         }
 
-        static bool InstallXciHttpStream(const std::string& url, const std::vector<std::string>& requestHeaders, NcmStorageId dest_storage) {
+        static bool InstallXciHttpStream(const std::string& url, const std::vector<std::string>& requestHeaders, nx::nexus::Target dest_storage) {
             tin::network::HTTPDownload download(url, requestHeaders);
             HttpStreamSource source(download);
 
@@ -2736,11 +2736,11 @@ namespace remoteInstStuff {
                     return true;
                 }
                 entry.storage = std::make_shared<nx::ncm::ContentStorage>(dest_storage);
-                if (entry.storage->Has(entry.nca_id)) {
+                if (entry.storage->CanReuse(entry.nca_id)) {
                     entry.started = true;
                     return true;
                 }
-                helper.TrackNca(entry.nca_id);
+                if (!dest_storage.usb()) helper.TrackNca(entry.nca_id);
                 try { entry.storage->DeletePlaceholder(*(NcmPlaceHolderId*)&entry.nca_id); } catch (...) {}
                 entry.nca_writer = std::make_unique<NcaWriter>(entry.nca_id, entry.storage);
                 entry.started = true;
@@ -2813,12 +2813,12 @@ namespace remoteInstStuff {
                             if (entry.nca_writer) {
                                 entry.nca_writer->close();
                                 entry.storage->Register(*(NcmPlaceHolderId*)&entry.nca_id, entry.nca_id);
+                                if (dest_storage.usb()) helper.TrackNca(entry.nca_id);
                                 try { entry.storage->DeletePlaceholder(*(NcmPlaceHolderId*)&entry.nca_id); } catch (...) {}
                             }
                             entry.complete = true;
                             if (entry.is_cnmt) {
-                                std::string cnmt_path = entry.storage->GetPath(entry.nca_id);
-                                nx::ncm::ContentMeta meta = tin::util::GetContentMetaFromNCA(cnmt_path);
+                                nx::ncm::ContentMeta meta = entry.storage->ReadContentMeta(entry.nca_id);
                                 NcmContentInfo cnmt_info{};
                                 cnmt_info.content_id = entry.nca_id;
                                 ncmU64ToContentInfoSize(entry.size & 0xFFFFFFFFFFFF, &cnmt_info);
@@ -2923,7 +2923,7 @@ namespace remoteInstStuff {
         return "";
     }
 
-    void installTitleRemote(const std::vector<RemoteItem>& items, int storage, const std::string& sourceLabel, const std::vector<RemoteItem>& availableItems)
+    void installTitleRemote(const std::vector<RemoteItem>& items, nx::nexus::Target storage, const std::string& sourceLabel, const std::vector<RemoteItem>& availableItems)
     {
         if (items.empty()) return;
         if (inst::ui::mainApp->IsUiThread()) {
@@ -2933,7 +2933,7 @@ namespace remoteInstStuff {
         inst::util::initInstallServices();
         inst::ui::instPage::loadInstallScreen();
         bool nspInstalled = true;
-        NcmStorageId destStorageId = storage ? NcmStorageId_BuiltInUser : NcmStorageId_SdCard;
+        const auto destStorageId = storage;
         inst::diag::StartSession("remote", items.size());
 
         auto catalog = items;

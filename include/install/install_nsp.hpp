@@ -22,6 +22,7 @@ SOFTWARE.
 
 #pragma once
 
+#include "nx/nexus_usb.hpp"
 #include <switch.h>
 #include <string>
 #include "install/install.hpp"
@@ -40,6 +41,6 @@ namespace tin::install::nsp
             void InstallTicketCert() override;
 
         public:
-            NSPInstall(NcmStorageId destStorageId, bool ignoreReqFirmVersion, const std::shared_ptr<NSP>& remoteNSP);
+            NSPInstall(nx::nexus::Target destStorageId, bool ignoreReqFirmVersion, const std::shared_ptr<NSP>& remoteNSP);
     };
 }

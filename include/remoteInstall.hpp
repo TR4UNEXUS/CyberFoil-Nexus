@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nx/nexus_usb.hpp"
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -60,5 +61,5 @@ namespace remoteInstStuff {
     std::string GetRemoteApiPrefix();
     bool DownloadCheatText(const RemoteItem& item, const std::string& user, const std::string& pass, std::string& text, std::string& error);
     bool UploadCheatText(const std::string& remoteUrl, const std::string& user, const std::string& pass, const std::string& titleId, const std::string& buildId, const std::string& note, const std::string& text, std::string& error);
-    void installTitleRemote(const std::vector<RemoteItem>& items, int storage, const std::string& sourceLabel, const std::vector<RemoteItem>& availableItems = {});
+    void installTitleRemote(const std::vector<RemoteItem>& items, nx::nexus::Target storage, const std::string& sourceLabel, const std::vector<RemoteItem>& availableItems = {});
 }

@@ -46,8 +46,7 @@ namespace nx::fs
 
         if (sizeRead != size)
         {
-            std::string msg = "Size read " + std::string("" + sizeRead) + " doesn't match expected size " + std::string("" + size);
-            THROW_FORMAT(msg.c_str());
+            THROW_FORMAT("Short file read: expected %zu bytes, received %llu", size, static_cast<unsigned long long>(sizeRead));
         }
     }
 
@@ -126,7 +125,7 @@ namespace nx::fs
 
     void IFileSystem::CloseFileSystem()
     {
-        fsFsClose(&m_fileSystem);
+        if (serviceIsActive(&m_fileSystem.s)) fsFsClose(&m_fileSystem);
     }
 
     IFile IFileSystem::OpenFile(std::string path)

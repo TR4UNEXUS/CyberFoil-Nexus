@@ -5,6 +5,12 @@ ROOT := ..
 OUT ?= /tmp/cyberfoil-lan-discovery-tests
 .PHONY: test
 test:
+	$(CXX) $(CXXFLAGS) -I$(ROOT)/include nexus_update_tests.cpp $(ROOT)/source/util/nexus_release.cpp -o $(OUT)-update
+	$(OUT)-update
+	$(CXX) $(CXXFLAGS) -DAPP_VERSION=\"test\" -Inexus_stubs -I$(ROOT)/include nexus_metadata_tests.cpp $(ROOT)/source/nx/metadata_stage.cpp $(ROOT)/source/util/install_diagnostics.cpp -o $(OUT)-metadata
+	$(OUT)-metadata
+	$(CXX) $(CXXFLAGS) -Inexus_stubs -I$(ROOT)/include nexus_usb_tests.cpp $(ROOT)/source/nx/nexus_usb.cpp -o $(OUT)-nexus
+	$(OUT)-nexus
 	$(CXX) $(CXXFLAGS) -Isave_data_stubs -I$(ROOT)/include save_data_policy_tests.cpp -o $(OUT)-save-data
 	$(OUT)-save-data
 	$(CXX) $(CXXFLAGS) -I$(ROOT)/include file_selection_tests.cpp -o $(OUT)-selection

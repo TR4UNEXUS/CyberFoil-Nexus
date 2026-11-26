@@ -2,7 +2,7 @@
     "main": {
         "menu": {
             "sd": "Install from SD card",
-            "hdd": "Install from USB SSD/HDD",
+            "hdd": "Install from USB Drive",
             "net": "Install over LAN or internet",
             "remote": "Install from Remote",
             "usb": "Install from NS-USBloader",
@@ -29,7 +29,7 @@
         },
         "hdd": {
             "title": "No USB drive detected",
-            "notfound": "Plug in a USB SSD or hard drive to install from it."
+            "notfound": "Connect a USB flash drive, SSD or hard drive, then reopen USB Drive."
         },
         "applet": {
             "title": "Applet Mode not supported",
@@ -40,7 +40,7 @@
             "button": "Info",
             "remote": "Browse Remote sections and select titles to install from your Remote.",
             "sd": "Install NSP/NSZ/XCI/XCZ files stored on your SD card.",
-            "hdd": "Install files directly from a connected USB SSD or hard drive.",
+            "hdd": "Browse install files on your external drive. Choose their destination after selecting a file.",
             "mtp": "Connect a PC over USB and install by copying files to the MTP install folder.",
             "usb": "Install over USB from tools like NS-USBloader.",
             "net": "Install files from LAN or internet sources.",

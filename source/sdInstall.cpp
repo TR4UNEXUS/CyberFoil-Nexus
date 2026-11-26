@@ -49,7 +49,7 @@ namespace inst::ui {
 
 namespace nspInstStuff {
 
-    void installNspFromFile(std::vector<std::filesystem::path> ourTitleList, int whereToInstall, const std::vector<std::filesystem::path>& availableTitles)
+    void installNspFromFile(std::vector<std::filesystem::path> ourTitleList, nx::nexus::Target whereToInstall, const std::vector<std::filesystem::path>& availableTitles)
     {
         if (ourTitleList.empty()) return;
         if (inst::ui::mainApp->IsUiThread()) {
@@ -59,10 +59,9 @@ namespace nspInstStuff {
         inst::util::initInstallServices();
         inst::ui::instPage::loadInstallScreen();
         bool nspInstalled = true;
-        NcmStorageId m_destStorageId = NcmStorageId_SdCard;
+        const auto m_destStorageId = whereToInstall;
         std::string currentName;
 
-        if (whereToInstall) m_destStorageId = NcmStorageId_BuiltInUser;
         auto catalog = ourTitleList;
         for (const auto& path : availableTitles)
             if (std::find(catalog.begin(), catalog.end(), path) == catalog.end()) catalog.push_back(path);

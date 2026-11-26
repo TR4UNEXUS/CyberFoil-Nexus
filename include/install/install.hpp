@@ -22,6 +22,7 @@ SOFTWARE.
 
 #pragma once
 
+#include "nx/nexus_usb.hpp"
 extern "C"
 {
 #include <switch/services/fs.h>
@@ -42,7 +43,7 @@ namespace tin::install
     class Install
     {
         protected:
-            const NcmStorageId m_destStorageId;
+            const nx::nexus::Target m_destStorageId;
             bool m_ignoreReqFirmVersion = false;
             bool m_declinedValidation = false;
 
@@ -58,7 +59,7 @@ namespace tin::install
             bool m_committed = false;
             void RollbackContentMeta() noexcept;
 
-            Install(NcmStorageId destStorageId, bool ignoreReqFirmVersion);
+            Install(nx::nexus::Target destStorageId, bool ignoreReqFirmVersion);
 
             virtual std::vector<std::tuple<nx::ncm::ContentMeta, NcmContentInfo>> ReadCNMT() = 0;
             bool IsSessionInstalledNca(const NcmContentId& ncaId) const;

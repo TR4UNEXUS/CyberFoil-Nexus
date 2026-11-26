@@ -213,10 +213,12 @@ namespace inst::ui {
             inst::ui::appletFinished = true;
             tin::data::NUM_BUFFER_SEGMENTS = 128;
         }
-        if (!updateFinished && (!inst::config::autoUpdate || inst::util::getIPAddress() == "1.0.0.127")) updateFinished = true;
-        if (!updateFinished && menuLoaded && inst::config::updateInfo.size()) {
-            updateFinished = true;
-            optionsPage::askToUpdate(inst::config::updateInfo);
+        if (!updateFinished && menuLoaded && inst::config::autoUpdate) {
+            if (const auto release = inst::update::pollBootCheck()) {
+                updateFinished = true;
+                optionsPage::askToUpdate(*release);
+                return;
+            }
         }
         if (!offlineDbUpdateCheckFinished && (!inst::config::offlineDbAutoCheckOnStartup || inst::util::getIPAddress() == "1.0.0.127"))
             offlineDbUpdateCheckFinished = true;
@@ -407,6 +409,7 @@ namespace inst::ui {
         this->Add(this->sysBarFill);
         this->Add(this->sdBarBack);
         this->Add(this->sdBarFill);
+        this->usbCard.attach(*this);
         this->Add(this->sysLabelText);
         this->Add(this->sysFreeText);
         this->Add(this->sdLabelText);
@@ -475,20 +478,22 @@ namespace inst::ui {
     }
 
     void MainPage::hddInstallMenuItem_Click() {
-        if (nx::hdd::count() && nx::hdd::rootPath()) {
-            mainApp->hddinstPage->drawMenuItems(true, nx::hdd::rootPath());
-            mainApp->hddinstPage->menu->SetSelectedIndex(0);
+        const char* root = nx::hdd::count() ? nx::hdd::rootPath() : nullptr;
+        if (root) {
             mainApp->LoadLayout(mainApp->hddinstPage);
+            mainApp->hddinstPage->drawMenuItems(true, root);
+            mainApp->hddinstPage->menu->SetSelectedIndex(0);
         } else {
             mainApp->CreateShowDialog("main.hdd.title"_lang, "main.hdd.notfound"_lang, {"common.ok"_lang}, true);
         }
     }
 
     void MainPage::mtpInstallMenuItem_Click() {
-        int dialogResult = mainApp->CreateShowDialog("inst.mtp.target.title"_lang, "inst.mtp.target.desc"_lang, {"inst.target.opt0"_lang, "inst.target.opt1"_lang}, false);
-        if (dialogResult == -1) return;
+        const nx::nexus::TargetChoices targets;
+        int dialogResult = mainApp->CreateShowDialog("inst.mtp.target.title"_lang, "inst.mtp.target.desc"_lang, targets.labels("inst.target.opt0"_lang, "inst.target.opt1"_lang), false);
+        if (dialogResult < 0) return;
 
-        if (!inst::mtp::StartInstallServer(dialogResult)) {
+        if (!inst::mtp::StartInstallServer(targets.at(dialogResult))) {
             mainApp->CreateShowDialog("inst.mtp.error.title"_lang, "inst.mtp.error.desc"_lang, {"common.ok"_lang}, true);
             return;
         }

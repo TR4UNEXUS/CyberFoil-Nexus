@@ -50,7 +50,7 @@ namespace inst::ui {
 
 namespace hddInstStuff {
 
-    void installNspFromFile(std::vector<std::filesystem::path> ourTitleList, int whereToInstall, const std::vector<std::filesystem::path>& availableTitles)
+    void installNspFromFile(std::vector<std::filesystem::path> ourTitleList, nx::nexus::Target whereToInstall, const std::vector<std::filesystem::path>& availableTitles)
     {
         if (ourTitleList.empty()) return;
         if (inst::ui::mainApp->IsUiThread()) {
@@ -60,10 +60,9 @@ namespace hddInstStuff {
         inst::util::initInstallServices();
         inst::ui::instPage::loadInstallScreen();
         bool nspInstalled = true;
-        NcmStorageId m_destStorageId = NcmStorageId_SdCard;
+        const auto m_destStorageId = whereToInstall;
         std::string currentName;
 
-        if (whereToInstall) m_destStorageId = NcmStorageId_BuiltInUser;
         auto catalog = ourTitleList;
         for (const auto& path : availableTitles)
             if (std::find(catalog.begin(), catalog.end(), path) == catalog.end()) catalog.push_back(path);
@@ -161,7 +160,7 @@ namespace hddInstStuff {
             if (std::filesystem::exists(inst::config::appDir + "/success.wav")) audioPath = inst::config::appDir + "/success.wav";
             std::thread audioThread(inst::util::playAudio, audioPath);
             if (ourTitleList.size() > 1) {
-                if (inst::config::deletePrompt) {
+                if (inst::config::deletePrompt && !ourTitleList.empty() && !ourTitleList.front().string().starts_with("nexus:")) {
                     if (inst::ui::mainApp->CreateShowDialog(std::to_string(ourTitleList.size()) + "inst.hdd.delete_info_multi"_lang, "inst.hdd.delete_desc"_lang, {"common.no"_lang, "common.yes"_lang}, false) == 1) {
                         for (long unsigned int i = 0; i < ourTitleList.size(); i++) {
                             if (std::filesystem::exists(ourTitleList[i])) {
@@ -174,7 +173,7 @@ namespace hddInstStuff {
                     inst::ui::mainApp->CreateShowDialog(std::to_string(ourTitleList.size()) + "inst.info_page.desc0"_lang, "inst.info_page.complete"_lang, {"common.ok"_lang}, true);
                 } else inst::ui::mainApp->CreateShowDialog(std::to_string(ourTitleList.size()) + "inst.info_page.desc0"_lang, "inst.info_page.complete"_lang, {"common.ok"_lang}, true);
             } else {
-                if (inst::config::deletePrompt) {
+                if (inst::config::deletePrompt && !ourTitleList.empty() && !ourTitleList.front().string().starts_with("nexus:")) {
                     if (inst::ui::mainApp->CreateShowDialog(inst::util::shortenString(ourTitleList[0].filename().string(), 32, true) + "inst.hdd.delete_info"_lang, "inst.hdd.delete_desc"_lang, {"common.no"_lang, "common.yes"_lang}, false) == 1) {
                         if (std::filesystem::exists(ourTitleList[0])) {
                             try {

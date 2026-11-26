@@ -1,4 +1,6 @@
 #pragma once
+#include "util/nexus_update.hpp"
+#include "ui/UsbSpaceCard.hpp"
 #include <pu/Plutonium>
 #include "ui/bottomHint.hpp"
 #include "util/config.hpp"
@@ -17,7 +19,7 @@ namespace inst::ui {
             void ShowThemePicker();
             PU_SMART_CTOR(optionsPage)
             void onInput(u64 Down, u64 Up, u64 Held, pu::ui::Touch Pos);
-            static void askToUpdate(std::vector<std::string> updateInfo);
+            static void askToUpdate(const inst::update::Release& release);
             Image::Ref titleImage;
             TextBlock::Ref appVersionText;
             TextBlock::Ref timeText;
@@ -30,6 +32,7 @@ namespace inst::ui {
             Rectangle::Ref sysBarFill;
             Rectangle::Ref sdBarBack;
             Rectangle::Ref sdBarFill;
+            UsbSpaceCard usbCard;
             Rectangle::Ref netIndicator;
             Rectangle::Ref wifiBar1;
             Rectangle::Ref wifiBar2;

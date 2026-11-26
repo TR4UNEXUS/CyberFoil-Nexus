@@ -22,7 +22,9 @@ SOFTWARE.
 
 #pragma once
 
+#include "nx/nexus_usb.hpp"
 #include <string>
+#include <optional>
 
 extern "C"
 {
@@ -34,25 +36,30 @@ extern "C"
 
 namespace nx::ncm
 {
+    class ContentMeta;
     class ContentStorage final
     {
         private:
             NcmContentStorage m_contentStorage;
+            nx::nexus::Target m_target;
+            std::optional<NcmPlaceHolderId> m_usbPlaceholder;
 
         public:
             // Don't allow copying, or garbage may be closed by the destructor
             ContentStorage& operator=(const ContentStorage&) = delete;
             ContentStorage(const ContentStorage&) = delete;   
 
-            ContentStorage(NcmStorageId storageId);
+            ContentStorage(nx::nexus::Target storageId);
             ~ContentStorage();
 
-            void CreatePlaceholder(const NcmContentId &placeholderId, const NcmPlaceHolderId &registeredId, size_t size);
+            void CreatePlaceholder(const NcmContentId &contentId, const NcmPlaceHolderId &placeholderId, size_t size);
             void DeletePlaceholder(const NcmPlaceHolderId &placeholderId);
             void WritePlaceholder(const NcmPlaceHolderId &placeholderId, u64 offset, void *buffer, size_t bufSize);
             void Register(const NcmPlaceHolderId &placeholderId, const NcmContentId &registeredId);
             void Delete(const NcmContentId &registeredId);
             bool Has(const NcmContentId &registeredId);
-            std::string GetPath(const NcmContentId &registeredId);
+            bool CanReuse(const NcmContentId &id);
+            void CheckUsbSize(const NcmContentInfo &info);
+            ContentMeta ReadContentMeta(const NcmContentId &id);
     };
 }

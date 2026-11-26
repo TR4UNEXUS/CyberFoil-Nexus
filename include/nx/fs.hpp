@@ -79,7 +79,7 @@ namespace nx::fs
     class IFileSystem
     {
         private:
-            FsFileSystem m_fileSystem;
+            FsFileSystem m_fileSystem{};
 
         public:
             // Don't allow copying, or garbage may be closed by the destructor

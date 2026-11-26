@@ -245,6 +245,8 @@ static void applyBufferedFileIo(FILE* file) {
 }
 
 namespace inst::curl {
+    bool initialize() { return ensureCurlGlobalInit(); }
+
     bool downloadFile (const std::string ourUrl, const char *pagefilename, long timeout, bool writeProgress) {
         if (!ensureCurlGlobalInit()) {
             LOG_DEBUG("curl global init failed\n");

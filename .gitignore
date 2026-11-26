@@ -16,6 +16,7 @@ scripts
 *.log
 *.py
 !tools/create_custom_packs.py
+!tools/package_nexus_release.py
 !tests/custom_packs_tests.py
 __pycache__/
 *.sh
